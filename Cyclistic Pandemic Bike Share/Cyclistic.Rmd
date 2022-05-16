@@ -1,0 +1,688 @@
+---
+title: "Chicago Pandemic Bikeshare Ridership"
+author: Winson Li
+date: 17 March 2022
+output: html_notebook
+---
+
+# Table of Contents
+
+## 1. Summary
+## Can we correlate daily ridership with weather data?
+## make a plot of ridership vs temperature, could be more useful to isolate by month or seasons. The answer might seem obvious, good warm weather = more riders but by how much??
+## Simpler bar graph with summary ridership data per month for yearly comparison.
+## 2. Introduction
+This notebook was complete as a capstone project for the Google Data Analytics program on Coursera. From browsing dozens of different capstone projects I decided to use the data a little differently and change the scope of the project to include more than four years worth of publicly available bikeshare data for analysis instead of one. This allows for year-on-year comparisons of the bikeshare program and should create more interesting insights. As the pandemic has also changed daily routines, I've also included local COVID-19 data from the City of Chicago data portal for analysis.
+
+Weather data from NOAA Climate Data Online Portal
+https://www.ncdc.noaa.gov/cdo-web/
+
+## 3. Data Preparation
+The raw data is provided by the Divvy bikeshare program in Chicago available [here](https://divvy-tripdata.s3.amazonaws.com/index.html). Data starting from January 2018 to February 2022 were downloaded as 32 csv files. From January 2018 to March 2020, the data is made available by quarter and from April 2020 onward the data is made available as monthly csv files.
+
+### 3.1 Load the packages for cleaning the data
+
+```{r Loading packages and libraries, echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+#library(ggthemes)
+```
+
+### 3.2 Loading the data
+Using the read_csv() function from the readr package included in tidyverse. It returns our data as tibbles unlike the read.csv() function, where data is returned a data frames, included in base R.
+
+```{r Load all the data, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Loading bikeshare data
+dt_2022_02 <- read_csv("~/Offline/Bike Share Data/202202-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2022_01 <- read_csv("~/Offline/Bike Share Data/202201-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_12 <- read_csv("~/Offline/Bike Share Data/202112-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_11 <- read_csv("~/Offline/Bike Share Data/202111-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_10 <- read_csv("~/Offline/Bike Share Data/202110-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_09 <- read_csv("~/Offline/Bike Share Data/202109-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_08 <- read_csv("~/Offline/Bike Share Data/202108-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_07 <- read_csv("~/Offline/Bike Share Data/202107-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_06 <- read_csv("~/Offline/Bike Share Data/202106-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_05 <- read_csv("~/Offline/Bike Share Data/202105-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_04 <- read_csv("~/Offline/Bike Share Data/202104-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_03 <- read_csv("~/Offline/Bike Share Data/202103-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_02 <- read_csv("~/Offline/Bike Share Data/202102-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2021_01 <- read_csv("~/Offline/Bike Share Data/202101-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2020_12 <- read_csv("~/Offline/Bike Share Data/202012-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2020_11 <- read_csv("~/Offline/Bike Share Data/202011-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2020_10 <- read_csv("~/Offline/Bike Share Data/202010-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2020_09 <- read_csv("~/Offline/Bike Share Data/202009-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2020_08 <- read_csv("~/Offline/Bike Share Data/202008-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2020_07 <- read_csv("~/Offline/Bike Share Data/202007-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2020_06 <- read_csv("~/Offline/Bike Share Data/202006-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2020_05 <- read_csv("~/Offline/Bike Share Data/202005-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2020_04 <- read_csv("~/Offline/Bike Share Data/202004-divvy-tripdata.csv", show_col_types = FALSE)
+dt_2020_Q1 <- read_csv("~/Offline/Bike Share Data/Divvy_Trips_2020_Q1.csv", show_col_types = FALSE)
+dt_2019_Q4 <- read_csv("~/Offline/Bike Share Data/Divvy_Trips_2019_Q4.csv", show_col_types = FALSE)
+dt_2019_Q3 <- read_csv("~/Offline/Bike Share Data/Divvy_Trips_2019_Q3.csv", show_col_types = FALSE)
+dt_2019_Q2 <- read_csv("~/Offline/Bike Share Data/Divvy_Trips_2019_Q2.csv", show_col_types = FALSE)
+dt_2019_Q1 <- read_csv("~/Offline/Bike Share Data/Divvy_Trips_2019_Q1.csv", show_col_types = FALSE)
+dt_2018_Q4 <- read_csv("~/Offline/Bike Share Data/Divvy_Trips_2018_Q4.csv", show_col_types = FALSE)
+dt_2018_Q3 <- read_csv("~/Offline/Bike Share Data/Divvy_Trips_2018_Q3.csv", show_col_types = FALSE)
+dt_2018_Q2 <- read_csv("~/Offline/Bike Share Data/Divvy_Trips_2018_Q2.csv", show_col_types = FALSE)
+dt_2018_Q1 <- read_csv("~/Offline/Bike Share Data/Divvy_Trips_2018_Q1.csv", show_col_types = FALSE)
+
+# Loading weather data
+dt_weather2018 <- read_csv("/Users/wnsn/Documents/R Scripts/Capstone Project/Chicago Midway Airport Weather 2018.csv", show_col_types = FALSE)
+dt_weather2019 <- read_csv("/Users/wnsn/Documents/R Scripts/Capstone Project/Chicago Midway Airport Weather 2019.csv", show_col_types = FALSE)
+
+```
+
+### Check and clean the data for any obvios inconsistencies
+
+Using the str(), head(), and colnames() function we find a few inconsistencies with data types and in the naming conventions of the columns. There are three variations in column names that we need to correct for. We'll rename the columns so that they all match the 2022 naming convention.
+
+```{r Cheack and clean the data}
+
+# First variation from 2022_02 to 2020_Q1
+print("First variation (2020-2022)")
+colnames(dt_2022_02)
+
+# Second variation 2019 Q1, Q3, Q4; 2018 Q2, Q3, Q4
+print("Second variation (2019 Q1, Q3, Q4; 2018 Q2, Q3, Q4)")
+colnames(dt_2019_Q4)
+
+# Third variation only 2019_Q2 and 2018_Q1
+print("Third variation (2019_Q2 and 2018_Q1)")
+colnames(dt_2019_Q2)
+
+
+
+
+```
+
+
+### 3.4 Merging the data into one dataset
+
+From the three variations in the column names we will standardize the data to the 2022 naming scheme. First we'll merge the data by the three different variations of column names and then use the mutate() function to changes the names to conform to the 2022 columns.
+
+We get an error message merging the 2020 data "Can't combine `start_station_id` <double> and `start_station_id` <character>." When testing each 2020 tibble we find that the December data has a different structure for the start_station_id. We use the mutate() and as.character() funtion to change the data types in the column to character.
+
+
+```{r Merge the data into one set}
+
+
+dt_2022 <- bind_rows(dt_2022_01, dt_2022_02)
+
+dt_2021 <- bind_rows(dt_2021_01, dt_2021_02, dt_2021_03, dt_2021_04,
+                     dt_2021_05, dt_2021_06, dt_2021_07, dt_2021_08,
+                     dt_2021_09, dt_2021_10, dt_2021_11, dt_2021_12,)
+
+dt_2020_temp <- bind_rows(dt_2020_Q1,
+                          dt_2020_04, dt_2020_05, dt_2020_06, dt_2020_07,
+                          dt_2020_08, dt_2020_09, dt_2020_10, dt_2020_11)
+
+# We encounter some inconsistency in the data type between the columns of different months preventing us from merging data
+# December data for dt_2020_12 stores the station_id data as characters, so we will change the rest of the station_id to characters
+dt_2020_temp <- mutate(dt_2020_temp,
+                       start_station_id = as.character(start_station_id),
+                       end_station_id = as.character(end_station_id))
+
+dt_2020 <- bind_rows(dt_2020_temp, dt_2020_12)
+
+# Now we can combine the data from 2022 to 2020
+dt_2022_to_2020 <- bind_rows(dt_2020, dt_2021, dt_2022)
+                     
+```
+
+Now the inconsistent naming between the 2018-2019 data and 2020-22 data needs to be corrected.
+
+```{r Renaming columns for consistency in the data set}
+
+# Merging data from the second variation of column name
+dt_name_var2 = bind_rows(dt_2019_Q1, dt_2019_Q3, dt_2019_Q4,
+                              dt_2018_Q2, dt_2018_Q3, dt_2018_Q4)
+
+
+# bikeid, gender, and birthyear are recorded in Var2 of the data but not Var1
+dt_name_var2_corrected <- dt_name_var2 %>% 
+  rename(ride_id = trip_id,
+         #rideable_type = , is not recorded
+         started_at = start_time,
+         ended_at = end_time,
+         start_station_name = from_station_name,
+         start_station_id = from_station_id,
+         end_station_name = to_station_name,
+         end_station_id = to_station_id,
+         #start_lat=, is not recorded
+         #start_lng=, is not recorded
+         #end_lat =, is not recorded
+         #end_lng =, is not recorded
+         member_casual = usertype) # There seems to be different classification of the user type, e.g. 'Subscriber' v.s. 'member'
+
+# Fix the data types so the rows can be bind
+dt_name_var2_corrected <- dt_name_var2_corrected %>% 
+  mutate(ride_id = as.character(ride_id),
+         start_station_id = as.character(start_station_id),
+         end_station_id = as.character(end_station_id))
+
+# Merging data from the third variation of table names
+dt_name_var3 = bind_rows(dt_2019_Q2, dt_2018_Q1)
+
+dt_name_var3_corrected <- dt_name_var3 %>% 
+  rename(ride_id = "01 - Rental Details Rental ID",
+         #rideable_type = , is not recorded
+         started_at = "01 - Rental Details Local Start Time",
+         ended_at = "01 - Rental Details Local End Time",
+         start_station_name = "03 - Rental Start Station Name",
+         start_station_id = "03 - Rental Start Station ID",
+         end_station_name = "02 - Rental End Station Name" ,
+         end_station_id = "02 - Rental End Station ID",
+         #start_lat=, is not recorded
+         #start_lng=, is not recorded
+         #end_lat =, is not recorded
+         #end_lng =, is not recorded
+         member_casual = "User Type",
+         bikeid = "01 - Rental Details Bike ID",
+         gender = "Member Gender" ,
+         birthyear = "05 - Member Details Member Birthday Year",
+         tripduration = "01 - Rental Details Duration In Seconds Uncapped") # There seems to be different classification of the user type, e.g. 'Subscriber' v.s. 'member'
+
+# Fix the data types so the rows can be bind
+dt_name_var3_corrected <- dt_name_var3_corrected %>% 
+  mutate(ride_id = as.character(ride_id),
+         start_station_id = as.character(start_station_id),
+         end_station_id = as.character(end_station_id))
+
+# binding all the rows bind_rows() we add trip duration, gender, birthyear, and bikeid data that's not in the data with name var2 and name var3. We have 17 rows in all.
+dt_2018_2022 = bind_rows(dt_2022_to_2020, dt_name_var2_corrected, dt_name_var3_corrected)
+print(unique(dt_2018_2022$member_casual)) #We have 4 values for member type when there should only be two
+
+#Fixing member types
+dt_2018_2022 <- dt_2018_2022 %>%
+  mutate(membership_type = case_when(member_casual == "member" ~ "member",
+                                     member_casual == "casual" ~ "casual",
+                                     member_casual == "Subscriber" ~ "member",
+                                     member_casual ==  "Customer" ~ "casual"))
+
+print(unique(dt_2018_2022$membership_type)) 
+
+#suggestions I got from helpful stackoverflow, before I realized I had a space in my assignment operator like this: < -
+# dt_2018_2022 <- dt_2018_2022 %>% 
+#   mutate(membership_type = case_when(member_casual == "casual" ~ "casual",
+#                                      member_casual == "Subscriber" ~ "member",
+#                                      member_casual == "Customer" ~ "casual",
+#                                      TRUE ~ "member"))
+
+# This one works too! Ifelse(condition, A, B) returns A if True, B if false
+# in this example the helpful person on stackexchange made a vector to compare it to, if eithe member or subscriber were in the cell being tested it would return member, and if not it would mean it's a casual rider so it would return casual.
+#dt_2018_2022 <-  mutate(dt_2018_2022, membership_type2 = ifelse(member_casual %in% c("member", "Subscriber"), "member", "casual"))
+
+#unique(dt_2018_2022$member_casual)
+
+```
+
+
+## 4. Data Exploration
+Now that the data are all in one neat file we can start doing some basic visualizations to explore the data and check its integrity. First I want to try and visualize rides per day over the time span of the data set, so I'll use the group_by() function and count function to count the number of rides per day. I also want to compare daily ridership compared by year, so I'll create data frames with the daily ridership for each year.
+
+```{r Plotting the numbers of riders per day}
+
+#cleaning up the dates to remove hour of day.
+all_rides_2018_2022 <- tibble(
+  ride_id = dt_2018_2022$ride_id,
+  date = date(dt_2018_2022$started_at),
+  year = year(dt_2018_2022$started_at),
+  membership = dt_2018_2022$membership_type)
+
+all_rides_2018_2021 <- all_rides_2018_2022 %>% 
+  filter(year != 2022)
+
+#can't use this data format for bar graphs but I can use it to calculate % change by year.
+# annual_ridership_summary <- rides_per_day %>% 
+#   group_by(year) %>% #we can also group by membership too when the data is is prepped properly!
+#   summarise(annual_riders = sum(n, na.rm=TRUE)) #na.rm means drop all n/a values
+
+ggplot(all_rides_2018_2021)+
+  geom_bar(aes(x = year), fill = 'orange') +
+  labs(title = "Yearly Ridership",
+       subtitle = "2018 - 2021",
+       caption = "Data from Divvy Chicago bike share",
+       x = "Year",
+       y = "Riders")
+
+ggplot(all_rides_2018_2021)+
+  geom_bar(aes(x = year, fill = membership)) + # we can change the fill to member type!
+  labs(title = "Yearly Ridership by Membership",
+       subtitle = "2018 - 2021",
+       caption = "Data from Divvy Chicago bike share",
+       x = "Year",
+       y = "Riders",
+       fill = "Membership")
+
+```
+ 
+
+
+Words!
+
+
+   
+```{r}
+ 
+# not grouped by membership type, useful just to look at total ridership
+rides_per_day <- all_rides_2018_2021 %>% 
+  group_by(date, year) %>% 
+  count(date)
+
+# setting year as.character makes sure that the years are interpreted as discrete values and not continuous values. This will be helpful when plotting, so the colour scale won't be a gradient when automatically assigned.
+rides_per_day <- rides_per_day %>% 
+  mutate(yearday = yday(date), year = as.character(year)) 
+
+# There are two days missing in the 2020 (leap year) data, so it only has 364 rows. We cannot just add a row to grouped data because of the was tibble works and we can't merge columns from tibble it's they're not the same length. Instead I'm just going to drop one of the missing days in 2020 from all the data sets. June 1st and June 2nd are both missing, so I'll just drop June 1. There are limitations to this method but it shouldn't impact our results and interpretation significantly. I add a NOT date to the filter to do this.
+
+rides_per_day_2018 <- rides_per_day %>% 
+  filter(year == 2018 & date != "2018-06-01") %>% 
+  mutate(yearday = yday(date)) %>% 
+   mutate(ridership2018 = n)
+rides_per_day_2019 <- rides_per_day %>% 
+  filter(year == 2019 & date != "2019-06-01") %>% 
+  mutate(yearday = yday(date)) %>% 
+   mutate(ridership2019 = n)
+rides_per_day_2020 <- rides_per_day %>% 
+  filter(year == 2020 & date != "2020-06-01") %>% 
+  mutate(yearday = yday(date)) %>% 
+   mutate(ridership2020 = n)
+rides_per_day_2021 <- rides_per_day %>% 
+  filter(year == 2021 & date != "2021-06-01") %>% 
+  mutate(yearday = yday(date)) %>% 
+   mutate(ridership2021 = n)
+
+
+daily_ride_count_by_year <- tibble(yd_2018 = rides_per_day_2018$yearday, ride_count_2018 = rides_per_day_2018$n,
+                                   yd_2019 = rides_per_day_2019$yearday, ride_count_2019 = rides_per_day_2019$n,
+                                   yd_2020 = rides_per_day_2020$yearday, ride_count_2020 = rides_per_day_2020$n,
+                                   yd_2021 = rides_per_day_2021$yearday, ride_count_2021 = rides_per_day_2021$n)
+
+```
+
+
+Now the we have the daily ridership data ready we can compare the data year by year.
+
+```{r Viewing the cleaned prepared data (move fancier plots to analysis section)}
+ggplot(rides_per_day) + 
+  geom_line(mapping = aes(x = date, y = n))+
+  #theme_fivethirtyeight()+
+  labs(
+  title = "Divvy Daily Ridership",
+  subtitle = "(Jan 2018 - Feb 2022)",
+  caption = "Data from Divvy Chicago bike share",
+  #tag = "Figure 1",
+  x = "Date",
+  y = "Riders",
+  #colour = "blue"
+  )
+  # geom_smooth(mapping = aes(x = date, y = n), method = 'loess', formula = y ~ x)
+  # This smooth line plotting method does not produce a good curve to fit the data.
+
+ggplot(rides_per_day) + 
+  geom_point(mapping = aes(x = date, y = n), alpha = 0.5)+
+  labs(
+  title = "Divvy Daily Ridership",
+  subtitle = "(Jan 2018 - Feb 2022)",
+  caption = "Data from Divvy Chicago bike share",
+  x = "Date",
+  y = "Riders",
+  )
+
+
+ggplot(rides_per_day,                            # Draw ggplot2 time series plot
+       aes(x = yearday,
+           y = n,
+           col = year)) + #having year as a dbl data type makes the plotting software treat it as continuous data, so it assigns a colour gradient to the data points being plotted isntead of having distinct years. Change the data type to char to have the data be treated as distinct values in the plot
+  geom_point(alpha = 0.5)+
+  labs(
+    title = "Divvy Daily Ridership Year-on-Year",
+    subtitle = "Scatter Plot (Jan 2018 - Feb 2022)",
+    caption = "Data from Divvy Chicago bike share",
+    #tag = "Figure 2",
+    x = "Day of the year",
+    y = "Riders",
+    colour = "Year") #+
+  #theme_economist() +
+  #theme(axis.title = element_text()) # using a ggtheme overwrites the axis labeling, this undoes that.
+
+
+# ggplot(daily_ride_count_by_year)+
+#   geom_point(aes(yd_2018,ride_count_2018),colour="darkorange", alpha = 0.5)+
+#   geom_point(aes(yd_2019,ride_count_2019),colour="seagreen", alpha = 0.5)+
+#   geom_point(aes(yd_2019,ride_count_2020),colour="turquoise", alpha = 0.5)+
+#   geom_point(aes(yd_2021,ride_count_2021),colour="slateblue", alpha = 0.5)+
+#   labs(
+#   title = "Divvy Daily Ridership Year-on-Year (Scatter)",
+#   subtitle = "Scatter Plot (Jan 2018 - Feb 2022)",
+#   caption = "Data from Divvy Chicago bike share",
+#   tag = "Figure 2",
+#   x = "Date",
+#   y = "Riders",
+#   colour = "Year"
+#   )
+
+ggplot(daily_ride_count_by_year)+
+  geom_smooth(aes(yd_2018,ride_count_2018,col="2018" ),method = 'loess', formula = y ~ x)+
+  geom_smooth(aes(yd_2019,ride_count_2019,col="2019" ),method = 'loess', formula = y ~ x)+
+  geom_smooth(aes(yd_2020,ride_count_2020,col="2020" ),method = 'loess', formula = y ~ x)+
+  geom_smooth(aes(yd_2021,ride_count_2021,col="2021" ),method = 'loess', formula = y ~ x)+
+  labs(
+  title = "Divvy Daily Ridership Year-on-Year",
+  subtitle = "Smoothed Line (Jan 2018 - Feb 2022)",
+  caption = "Data from Divvy Chicago bike share",
+  #tag = "Figure 3",
+  x = "Day of the year",
+  y = "Riders",
+  colour = "Year"
+  )
+
+#probably better to directly label the fitted curve than have it on a legend.
+
+ggplot(daily_ride_count_by_year)+
+  geom_jitter(aes(yd_2018,ride_count_2018),colour="darkorange", alpha = 0.5)+
+  geom_jitter(aes(yd_2019,ride_count_2019),colour="seagreen", alpha = 0.5)+
+  geom_jitter(aes(yd_2019,ride_count_2020),colour="turquoise", alpha = 0.5)+
+  geom_jitter(aes(yd_2021,ride_count_2021),colour="slateblue", alpha = 0.5)+
+  geom_smooth(aes(yd_2018,ride_count_2018,col="2018" ),method = 'loess', formula = y ~ x)+
+  geom_smooth(aes(yd_2019,ride_count_2019,col="2019" ),method = 'loess', formula = y ~ x)+
+  geom_smooth(aes(yd_2020,ride_count_2020,col="2020" ),method = 'loess', formula = y ~ x)+
+  geom_smooth(aes(yd_2021,ride_count_2021,col="2021" ),method = 'loess', formula = y ~ x)+
+  labs(
+  title = "Divvy Daily Ridership Year-on-Year",
+  subtitle = "Scatter + Smoothed Line (Jan 2018 - Feb 2022)",
+  caption = "Data from Divvy Chicago bike share",
+  #tag = "Figure 4",
+  x = "Day of the year",
+  y = "Riders",
+  colour = "Year"
+  )
+
+
+```
+```{r}
+
+```
+
+# Breakdown by membership
+
+```{r}
+# add a grouping by membership, will be useful for examine membership
+# data in long format (each observation has a row)
+rides_per_day_membership <- all_rides_2018_2021 %>% 
+  group_by(date, year, membership) %>% 
+  count(date)
+
+rides_per_day_membership <- rides_per_day_membership %>% 
+  mutate(yearday = yday(date)) %>% 
+  mutate(month = month(date, label  = TRUE))
+
+#putting data in wide format
+rides_per_day_member <- rides_per_day_membership %>% 
+  filter(membership == "member") %>% 
+  rename(member_ridership = n) %>% 
+  mutate(yearday = yday(date))
+rides_per_day_casual <- rides_per_day_membership %>% 
+  filter(membership == "casual") %>% 
+  rename(casual_ridership = n) 
+rides_per_day_by_membership <- inner_join(rides_per_day_member,rides_per_day_casual,by = "date")
+
+ggplot(rides_per_day_by_membership)+
+  geom_point(aes(date,member_ridership), color = 'turquoise', alpha = 0.5)+
+  geom_point(aes(date,casual_ridership), color = 'orange', alpha = 0.5) #+   
+  # geom_text(data=data.frame(), 
+  #           aes(x= as.Date(2021-07-15, origin = "2018-01-01"), y= 20000, label="Casual Riders"),
+  #           color="orange", hjust=5, size=3, nudge_x=0)
+  
+
+ggplot(rides_per_day_membership)+
+  geom_point(aes(date,n, color = membership), alpha = 0.5)+
+  scale_colour_manual(name="Membership", values = c("casual"="orange", "member"="turquoise")) +
+  theme(legend.position = c(0.2, 0.85))
+
+ggplot(rides_per_day_membership)+
+  geom_point(aes(date,n, shape = membership, colour = month),alpha = 0.5) +
+    scale_colour_manual(name="Month", values = c("Jan"="#2196F3", 
+                                              "Feb"="#00BCD4", 
+                                              "Mar"="#009688", 
+                                              "Apr"="#4CAF50", 
+                                              "May"="#CDDC39",
+                                              "Jun"="#FFEB3B",
+                                              "Jul"="#FFA000",
+                                              "Aug"="#F57C00",
+                                              "Sep"="#FF5722",
+                                              "Oct"="#E91E63",
+                                              "Nov"="#BA68C8",
+                                              "Dec"="#512DA8"))
+```
+
+
+
+
+
+
+# How does weather affect ridership?
+
+```{r Preparing and Plotting Weather Data}
+
+dt_tmax2018yd <- tibble(yearday = yday(dt_weather2018$DATE), tmax2018 = dt_weather2018$TMAX) 
+dt_tmax2019yd <- tibble(yearday = yday(dt_weather2019$DATE), tmax2019 = dt_weather2019$TMAX) 
+
+
+
+rides_weather_2018 <- inner_join(rides_per_day_2018, dt_tmax2018yd, by = "yearday")
+rides_weather_2019 <- inner_join(rides_per_day_2019, dt_tmax2019yd, by = "yearday")
+
+ride_weather_2018_2019 <- inner_join(rides_weather_2018, rides_weather_2019, by = "yearday")
+
+ggplot(ride_weather_2018_2019)+
+  geom_jitter(aes(x = yearday, y = tmax2018),colour="darkorange", alpha = 0.5) +
+  geom_jitter(aes(x = yearday, y = tmax2019),colour="turquoise", alpha = 0.5) +
+  geom_smooth(aes(x = yearday, y = tmax2018,col="2018" ),method = 'loess', formula = y ~ x) +
+  geom_smooth(aes(x = yearday, y = tmax2019,col="2019" ),method = 'loess', formula = y ~ x) +
+  labs(
+    title = "Chicago Daily Maximum Temperature",
+    subtitle = "Scatter + Smoothed Line (2018 - 2019)",
+    caption = "Data from NOAA Climate Data Online Portal",
+    #tag = "Figure 5",
+    x = "Day of the year",
+    y = "Max Temperature (Celsius)",
+    colour = "Year"
+  )
+
+
+```
+
+```{r Plotting the weather data against daily ridership}
+
+ggplot(ride_weather_2018_2019)+
+  geom_jitter(aes(x = tmax2018, y = ridership2018),colour="darkorange", alpha = 0.5) +
+  geom_jitter(aes(x = tmax2019, y = ridership2019),colour="turquoise", alpha = 0.5) +
+  geom_smooth(aes(x = tmax2018, y = ridership2018),colour="darkorange", method = 'loess', formula = y ~ x) +
+  geom_smooth(aes(x = tmax2019, y = ridership2019),colour="turquoise",method = 'loess', formula = y ~ x) +
+  labs(
+    title = "Daily Ridership VS Maximum Temperature",
+    subtitle = "Scatter + Smoothed Line (2018 - 2019)",
+    caption = "Data from NOAA Climate Data Online Portal & Divvy Bike Share",
+    #tag = "Figure 5",
+    x = "Daily High Temperature (Celsius)",
+    y = "Daily Ridership",
+    colour = "Year"
+  )
+
+# ggplot(ride_weather_2018_2019)+
+#   geom_jitter(aes(y = tmax2018, x = ridership2018),colour="darkorange", alpha = 0.5) +
+#   geom_jitter(aes(y = tmax2019, x = ridership2019),colour="turquoise", alpha = 0.5) +
+#   geom_smooth(aes(y = tmax2018, x = ridership2018,col="2018" ),method = 'loess', formula = y ~ x) +
+#   geom_smooth(aes(y = tmax2019, x = ridership2019,col="2019" ),method = 'loess', formula = y ~ x) +
+#   labs(
+#     title = "Daily Maximum Temperature",
+#     subtitle = "Scatter + Smoothed Line (2018 - 2019)",
+#     caption = "Data from NOAA Climate Data Online Portal",
+#     tag = "Figure 5",
+#     x = "Day of the year",
+#     y = "Max Temperature (Celsius)",
+#     colour = "Year"
+#   )
+
+```
+
+```{r}
+
+#renaming some rows so we can bind them as one tibble
+rides_weather_2018 <- rides_weather_2018 %>% 
+  rename(ridership = ridership2018,
+         tmax = tmax2018)
+
+rides_weather_2019 <- rides_weather_2019 %>% 
+  rename(ridership = ridership2019,
+         tmax = tmax2019)
+
+#putting the two tibbles together
+daily_ridership_weather <- bind_rows(rides_weather_2018, rides_weather_2019)
+
+#add months
+daily_ridership_weather <- daily_ridership_weather %>% 
+  mutate(month = month(date, label = TRUE))
+
+
+ggplot(daily_ridership_weather)+
+  geom_jitter(aes(x = tmax, y = ridership),colour="magenta", alpha = 0.5) +
+  geom_smooth(aes(x = tmax, y = ridership),colour="purple", method = 'loess', formula = y ~ x) +
+  #geom_smooth(aes(x = tmax2019, y = ridership2019),method = 'loess', formula = y ~ x) +
+  labs(
+    title = "Daily Ridership VS Maximum Temperature",
+    subtitle = "Scatter + Smoothed Line (2018 - 2019)",
+    caption = "Data from NOAA Climate Data Online Portal & Divvy Bike Share",
+    #tag = "Figure 5",
+    x = "Daily High Temperature (Celsius)",
+    y = "Daily Ridership",
+    colour = "Year"
+  )
+
+ggplot(daily_ridership_weather)+
+  geom_point(aes(x = tmax, y = ridership, colour = month), alpha = 0.5) +
+  #geom_smooth(aes(x = tmax, y = ridership), colour = 'purple', method = 'loess', formula = y ~ x) +
+  scale_colour_manual(name="Month", values = c("Jan"="#2196F3", 
+                                              "Feb"="#00BCD4", 
+                                              "Mar"="#009688", 
+                                              "Apr"="#4CAF50", 
+                                              "May"="#CDDC39",
+                                              "Jun"="#FFEB3B",
+                                              "Jul"="#FFA000",
+                                              "Aug"="#F57C00",
+                                              "Sep"="#FF5722",
+                                              "Oct"="#E91E63",
+                                              "Nov"="#BA68C8",
+                                              "Dec"="#512DA8"))+
+  labs(
+    title = "Daily Ridership VS Maximum Temperature",
+    subtitle = "Scatter + Smoothed Line (2018 - 2019)",
+    caption = "Data from NOAA Climate Data Online Portal & Divvy Bike Share",
+    #tag = "Figure 5",
+    x = "Daily High Temperature (Celsius)",
+    y = "Daily Ridership",
+    colour = "Year")
+
+ggplot(daily_ridership_weather)+
+  geom_point(aes(x = tmax, y = ridership, colour = month), alpha = 0.5) +
+  geom_smooth(aes(x = tmax, y = ridership), colour = 'purple', method = 'loess', formula = y ~ x) +
+  scale_colour_manual(name="Month", values = c("Jan"="#2196F3", 
+                                              "Feb"="#00BCD4", 
+                                              "Mar"="#009688", 
+                                              "Apr"="#4CAF50", 
+                                              "May"="#CDDC39",
+                                              "Jun"="#FFEB3B",
+                                              "Jul"="#FFA000",
+                                              "Aug"="#F57C00",
+                                              "Sep"="#FF5722",
+                                              "Oct"="#E91E63",
+                                              "Nov"="#BA68C8",
+                                              "Dec"="#512DA8"))+
+  labs(
+    title = "Daily Ridership VS Maximum Temperature",
+    subtitle = "Scatter + Smoothed Line (2018 - 2019)",
+    caption = "Data from NOAA Climate Data Online Portal & Divvy Bike Share",
+    #tag = "Figure 5",
+    x = "Daily High Temperature (Celsius)",
+    y = "Daily Ridership",
+    colour = "Year")+
+    theme(text = element_text(size = 14), element_line(size = 0.8))
+
+```
+
+# Dumbel plot.
+
+```{r}
+
+library(ggalt)
+
+dumbell_2019_2018 <- rides_per_day_membership %>% 
+  group_by(year, month) %>% 
+  summarise(monthly_ridership =  sum(n))
+
+dumbell_2019_2018_membership <- rides_per_day_membership %>% 
+  group_by(year, month, membership) %>% 
+  summarise(monthly_ridership =  sum(n))
+
+# turning long sata into wide data for the plot
+dumbell_2019_2018_wide <- dumbell_2019_2018 %>% 
+  pivot_wider(names_from = year, values_from = monthly_ridership) %>% 
+  rename(ridership_2021 = '2021', ridership_2020 = '2020', ridership_2019 = '2019', ridership_2018 = '2018')
+
+#dumbell_2019_2018_wide <- arrange(dumbell_2019_2018_wide, desc(month))
+ 
+ggplot(dumbell_2019_2018_wide) + 
+  geom_dumbbell(aes(x = ridership_2020, xend = ridership_2021, y = month),
+                size=2, color="#8ED1FC",
+                colour_x = "red", colour_xend = "blue") +
+  geom_dumbbell(aes(x = ridership_2019, xend = ridership_2020, y = month),
+                size=2, color="#8ED1FC",
+                colour_x = "darkgreen", colour_xend = "red") +
+  scale_y_discrete(limits=rev) +
+  #scale_x_continuous(labels = comma) +
+  geom_text(data=data.frame(), 
+                    aes(x=729595, y= "Jun", label="2021"),
+                    color="black", hjust=1, size=3, nudge_x=50000) + 
+  geom_text(data=data.frame(), 
+                    aes(x=343005, y= "Jun", label="2020"),
+                    color="black", hjust=0, size=3, nudge_x=-45000) +   
+  geom_text(data=data.frame(), 
+                    aes(x=475395, y= "Jun", label="2019"),
+                    color="black", hjust=0.5, size=3, nudge_y=0.3) +
+  labs(x = "Monthly Ridership", y = "Month", title="Pre-Pandemic and Post-Pandemic Monthly Ridership")
+  #geom_point(aes(y = month, x = ridership_2019))
+
+```
+
+
+One to show the affect of the pandemic on monthly ridership, from 2019 to 2020 and one to show the effect of recover from 2020 to 2021.
+
+
+## 5. Analyze and Visualize
+## 6. Discussion
+## 7. Recommendations
+
+
+
+
+
+
+
+
+---
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
