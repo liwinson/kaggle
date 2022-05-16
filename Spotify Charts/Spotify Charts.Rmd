@@ -1,0 +1,231 @@
+---
+title: "Spotify Charts"
+author: Winson
+date: March 21, 2022
+output: html_notebook
+---
+
+#Spotify Artist Diversity by Country
+
+I want to look at the top 200 artist diversity by country and it's change over time with this data set. We can do it by country and see what we get. There really isn't as much data as it'd like there to be compared to every noise. There isn't even language data so I don't have that much to work with but I think looking at artist diversity will be good!
+
+I can probably make a make and a simple bargraph.
+
+Can I relate the artist diversity data with population or other metrics?
+
+
+
+```{r Import libraries and load data, message=FALSE, warning=FALSE}
+
+library(plotly)
+library(tidyverse) # metapackage of all tidyverse packages
+library(lubridate)
+
+#list.files(path = "../input")
+
+dt_charts <- read_csv("~/Offline/Spotify Charts  Data/charts.csv")
+#dt_country_codes <- read_csv("https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv")
+
+```
+
+## Preparing and sorting the data
+For a country by country comparison, we have to group the data by chart type and country. I think it'll be easiest to use the first/primary artist listed on the track for comparison. That'll keep the number of artists counted between country charts consistent and make the comparison simpler. We're not interested in track names or rank at the moment, so let's get the date, artist, region and chart, data in one table. The number of streams also might be interesting to play with later, but the data seems incomplete.
+Since this is a very big data file, we'll filter the data by year and top 200 charts only. Then we'll use the separate function to get the primary artist and add that column to the table. We'll do this for each year.
+
+
+```{r Sorting and cleaning}
+
+dt_charts_2021 <- dt_charts %>% 
+  filter(year(date) == 2021, chart == "top200", region != "Global")
+dt_artists_2021 = tibble(artist = dt_charts_2021$artist)
+dt_artist_split_2021 <- dt_charts_2021 %>%
+  separate(artist, c("primary","secondary"), ", ")
+dt_charts_2021 <- dt_charts_2021 %>% 
+  add_column(primary_artist = dt_artist_split_2021$primary)
+
+dt_charts_2020 <- dt_charts %>% 
+  filter(year(date) == 2020, chart == "top200", region != "Global")
+dt_artists_2020 = tibble(artist = dt_charts_2020$artist)
+dt_artist_split_2020 <- dt_charts_2020 %>%
+  separate(artist, c("primary","secondary"), ", ")
+dt_charts_2020 <- dt_charts_2020 %>% 
+  add_column(primary_artist = dt_artist_split_2020$primary)
+
+dt_charts_2019 <- dt_charts %>% 
+  filter(year(date) == 2019, chart == "top200", region != "Global")
+dt_artists_2019 = tibble(artist = dt_charts_2019$artist)
+dt_artist_split_2019 <- dt_charts_2019 %>%
+  separate(artist, c("primary","secondary"), ", ")
+dt_charts_2019 <- dt_charts_2019 %>% 
+  add_column(primary_artist = dt_artist_split_2019$primary)
+
+dt_charts_2018 <- dt_charts %>% 
+  filter(year(date) == 2018, chart == "top200", region != "Global")
+dt_artists_2018 = tibble(artist = dt_charts_2018$artist)
+dt_artist_split_2018 <- dt_charts_2018 %>%
+  separate(artist, c("primary","secondary"), ", ")
+dt_charts_2018 <- dt_charts_2018 %>% 
+  add_column(primary_artist = dt_artist_split_2018$primary)
+
+dt_charts_2017 <- dt_charts %>% 
+  filter(year(date) == 2017, chart == "top200", region != "Global")
+dt_artists_2017 = tibble(artist = dt_charts_2017$artist)
+dt_artist_split_2017 <- dt_charts_2017 %>%
+  separate(artist, c("primary","secondary"), ", ")
+dt_charts_2017 <- dt_charts_2017 %>% 
+  add_column(primary_artist = dt_artist_split_2017$primary)
+
+```
+
+## Processing the data for unique artists
+Now that we have the data sorted and cleaned, we can now process it to get the number of unique artists that appear in each country's Top 200 chart for each year. We'll make a table with country/regions for columns and year for rows. The observation in each cell will contain the number of unique artists that appeared in the Top 200 charts.
+
+```{r Pocessing the data for number of unique artists per counrty by year}
+
+# Spotify added more regions as time progressed.
+regions_2021 <- unique(dt_charts_2021$region)
+regions_2020 <- unique(dt_charts_2020$region)
+regions_2019 <- unique(dt_charts_2019$region)
+regions_2018 <- unique(dt_charts_2018$region)
+regions_2017 <- unique(dt_charts_2017$region)
+
+# defining the table we're going to use
+unique_artists_dt = tibble(country = character(), code = character(),
+                           year = double(), unique_artists = integer())
+
+# For 2021
+regions <- regions_2021
+year <- 2021
+chart_dt <- dt_charts_2021
+x <- 1
+while (x <= length(regions)){
+  region_charts <- filter(chart_dt, region == !!(regions[x]))
+  region_unique_artists <- length(unique(region_charts$primary_artist))
+  #country_code = countrycode(regions[x], origin = "country.name", destination = "iso3c")
+  unique_artists_dt <- unique_artists_dt %>% 
+    add_row(country := !!(regions_2021[x]), 
+            #code = country_code,
+            year := !!(year),
+            unique_artists := !!(region_unique_artists))
+    # I just learned how to pass parameter/ variable names into another function
+    # use ColumnX := !!(variable) or ColumnX := "{variable}"+"{variable}" for string that you want to combine
+  x <- x + 1
+}
+
+unique_artists_2021 <- unique_artists_dt # For testing later
+
+# For 2020
+regions <- regions_2020
+year <- 2020
+chart_dt <- dt_charts_2020
+x <- 1
+while (x <= length(regions)){
+  region_charts <- filter(chart_dt, region == !!(regions[x]))
+  region_unique_artists <- length(unique(region_charts$primary_artist))
+  #country_code = countrycode(regions[x], origin = "country.name", destination = "iso3c")
+  unique_artists_dt <- unique_artists_dt %>% 
+    add_row(country := !!(regions_2021[x]), 
+            #code = country_code,
+            year := !!(year), 
+            unique_artists := !!(region_unique_artists))
+  x <- x + 1
+}
+
+# For 2019
+regions <- regions_2019
+year <- 2019
+chart_dt <- dt_charts_2019
+x <- 1
+while (x <= length(regions)){
+  region_charts <- filter(chart_dt, region == !!(regions[x]))
+  region_unique_artists <- length(unique(region_charts$primary_artist))
+  #country_code = countrycode(regions[x], origin = "country.name", destination = "iso3c")
+  unique_artists_dt <- unique_artists_dt %>% 
+    add_row(country := !!(regions_2021[x]), 
+            #code = country_code,
+            year := !!(year), 
+            unique_artists := !!(region_unique_artists))
+  x <- x + 1
+}
+
+# For 2018
+regions <- regions_2018
+year <- 2018
+chart_dt <- dt_charts_2018
+x <- 1
+while (x <= length(regions)){
+  region_charts <- filter(chart_dt, region == !!(regions[x]))
+  region_unique_artists <- length(unique(region_charts$primary_artist))
+  #country_code = countrycode(regions[x], origin = "country.name", destination = "iso3c")
+  unique_artists_dt <- unique_artists_dt %>% 
+    add_row(country := !!(regions_2021[x]),
+            #code = country_code,
+            year := !!(year), unique_artists := !!(region_unique_artists))
+  x <- x + 1
+}
+
+# For 2017
+regions <- regions_2017
+year <- 2017
+chart_dt <- dt_charts_2017
+x <- 1
+while (x <= length(regions)){
+  region_charts <- filter(chart_dt, region == !!(regions[x]))
+  region_unique_artists <- length(unique(region_charts$primary_artist))
+  #country_code = countrycode(regions[x], origin = "country.name", destination = "iso3c")
+  unique_artists_dt <- unique_artists_dt %>% 
+    add_row(country := !!(regions_2021[x]),
+            #code = country_code,
+            year := !!(year),
+            unique_artists := !!(region_unique_artists))
+  x <- x + 1
+}
+
+head(unique_artists_dt)
+```
+
+## Visualize the diversity
+With the data prepared and processed, we can plot it on a map!
+
+```{r Plotting the data}
+
+# light grey boundaries
+l <- list(color = toRGB("grey"), width = 0.5)
+
+# specify map projection/options
+g <- list(
+  showframe = TRUE,
+  showcoastlines = TRUE,
+  scope = 'europe',
+  projection = list(type = 'natural earth')
+)
+
+fig <- plot_geo(unique_artists_dt,
+                locationmode = "country names",
+                frame = ~year) %>% 
+  add_trace(z = ~unique_artists,
+            zmin = min(unique_artists_dt$unique_artists),
+            zmax = max(unique_artists_dt$unique_artists),
+            color = ~unique_artists, 
+            #colorscale = "Electric",
+            #text = ~country, 
+            locations = ~country,
+            marker = list(line = l)
+            )
+fig <- fig %>% colorbar(title = 'Unique Artists')
+fig <- fig %>% layout(
+    title = 'Spotify Top 200 Chart Diversity<br>Unique artists reaching the Top 200 charts by country',
+    geo = g
+  )
+
+fig
+
+
+
+
+```
+
+
+
+# Another chart for glbal diversity of musicians would be interesting! Pie chart would be more approporate? The data would be as a share of total streams. The data would need to be in a table with artist in one column and total streams for the year in the next, optional column of year, if we want to seperate the data by year.
+
